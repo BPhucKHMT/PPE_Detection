@@ -1,0 +1,5 @@
+checkpoint_best_total.pth
+__pycache__/
+data_rfdetr/
+data_yolo/
+data_yolo.zip

@@ -1,0 +1,22 @@
+# --- Core ---
+torch
+torchvision
+
+ultralytics>=8.1.0
+
+# RF-DETR (dùng đúng API optimize_for_inference + predict)
+rfdetr==1.2.1
+
+# Detections utils
+supervision==0.26.1
+
+# UI Streamlit App
+streamlit>=1.31.0
+
+# Image libs
+pillow>=10.0.0
+
+# Optional (khuyến nghị)
+opencv-python
+numpy
+matplotlib

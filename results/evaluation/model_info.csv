@@ -1,0 +1,2 @@
+Model_path,Parameters,GFLOPs,Model_size_MB
+/workspace/models/yolo11l_ep200_bs128_img640/weights/best.pt,25292419,N/A,48.85830020904541
