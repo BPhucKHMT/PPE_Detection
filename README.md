@@ -33,7 +33,6 @@
 │       └── labels/
 ├── models/                  # Chứa checkpoint và kết quả huấn luyện
 │   ├── rf-detr/                 # Kết quả huấn luyện RF-DETR
-│   │   └── log.txt
 │   └── yolo11l_ep200_bs128_img640/ # Kết quả huấn luyện YOLO11 Large
 │       ├── args.yaml
 │       ├── results.csv
@@ -41,9 +40,9 @@
 │           ├── best.pt
 │           └── epoch30.pt
 ├── notebooks/               # Notebook Jupyter phân tích, trực quan hóa
-│   ├── cs406-rf-detr-augmentation.ipynb # Augmentation RF-DETR
+│   ├── cs406-rf-detr-augmentation.ipynb # Augmentation RF-DETR + Train + Evaluate
 │   ├── visualize_data.ipynb             # Trực quan hóa dữ liệu
-│   └── yolov12s-100-epochs.ipynb        # Huấn luyện thử nghiệm YOLOv12
+│   └── yolov12s-100-epochs.ipynb        # Huấn luyện thử nghiệm YOLOv12 bản s
 ├── results/                  # Báo cáo đánh giá mô hình
 │   └── evaluation/               # Các file kết quả, metric
 │       ├── confidence_threshold_analysis.csv
@@ -69,42 +68,22 @@
 │       └── __pycache__/
 ```
 
-## Giải thích các thư mục
-
-- **app.py**: Ứng dụng giao diện so sánh mô hình.
-- **requirements.txt**: Thư viện Python cần thiết.
-- **rf_detr_loader.py**: Hàm tải mô hình RF-DETR.
-- **yolo11_best.pt, yolo11n.pt, yolo12_best.pt**: Checkpoint mô hình YOLO.
-- **checkpoint_best_total.pth**: Checkpoint RF-DETR.
 
 ### data_rfdetr/
 - Dữ liệu gốc cho RF-DETR (định dạng COCO).
-- `train/`, `valid/`, `test/`: Ảnh và annotation COCO.
+- Có thể tải tại https://drive.google.com/drive/folders/1zXJl1N65A6CLhU1O4f-HPAE7VcCg-Vll
+- Sau đó giải nén và để cùng cấp với app.py
 
 ### data_yolo/
 - Dữ liệu chuyển sang định dạng YOLO.
-- `data.yaml`: Cấu hình cho YOLO.
-- `train/`, `valid/`, `test/`: Ảnh và nhãn YOLO.
+- Có thể tải tại https://drive.google.com/drive/folders/1zXJl1N65A6CLhU1O4f-HPAE7VcCg-Vll
+- Sau đó giải nén và để cùng cấp với app.py
 
 ### models/
 - Chứa checkpoint và kết quả huấn luyện.
 - `rf-detr/`: Kết quả RF-DETR.
 - `yolo11l_ep200_bs128_img640/`: Kết quả YOLO11 Large.
 
-### notebooks/
-- Notebook Jupyter phân tích, trực quan hóa, thử nghiệm.
-
-### results/
-- Báo cáo đánh giá mô hình.
-- `evaluation/`: Các file kết quả, metric.
-
-### runs/
-- Kết quả các lần chạy phát hiện đối tượng.
-
-### train/
-- Script huấn luyện và đánh giá từng mô hình.
-- `RF-DETR/`: Script cho RF-DETR.
-- `YOLO_v11+v12/`: Script cho YOLO.
 
 
 ## Hướng dẫn build và thực thi code
