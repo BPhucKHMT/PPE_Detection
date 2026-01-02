@@ -106,9 +106,47 @@
 - `RF-DETR/`: Script cho RF-DETR.
 - `YOLO_v11+v12/`: Script cho YOLO.
 
----
 
-**Lưu ý:**
-- Sử dụng các script trong `train/` để huấn luyện hoặc đánh giá.
-- Dữ liệu cần chuẩn hóa đúng định dạng.
+## Hướng dẫn build và thực thi code
+
+### 1. Cài đặt môi trường
+```bash
+pip install -r requirements.txt
+```
+Hoặc sử dụng Anaconda:
+```bash
+conda create -n cs406 python=3.10
+conda activate cs406
+pip install -r requirements.txt
+```
+
+### 2. Huấn luyện mô hình
+- RF-DETR:
+	```bash
+	python train/RF-DETR/train.py
+	```
+- YOLO v11/v12:
+	```bash
+	python train/YOLO_v11+v12/train.py
+	```
+
+### 3. Đánh giá mô hình
+- RF-DETR:
+	```bash
+	python train/RF-DETR/evaluate.py
+	```
+- YOLO v11/v12:
+	```bash
+	python train/YOLO_v11+v12/evaluate.py
+	```
+
+### 4. Chạy giao diện so sánh mô hình
+```bash
+streamlit run app.py
+```
+
+### 5. Lưu ý
+- Dữ liệu cần được đặt đúng cấu trúc như mô tả ở trên.
+- Các checkpoint mô hình nên được đặt đúng tên và vị trí.
+- Kết quả huấn luyện và đánh giá sẽ lưu ở các thư mục `results/` và `runs/`.
 - Kết quả lưu ở `results/` và `runs/`.
