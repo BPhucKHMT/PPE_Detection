@@ -7,13 +7,12 @@ from supervision.metrics import MeanAveragePrecision
 from PIL import Image
 
 model = RFDETRMedium(pretrain_weights="checkpoint_best_total.pth")
-model.optimize_for_inference()
 
 class Dataset:
     def __init__(self, location):
         self.location = location
 
-dataset = Dataset("SH17-2")
+dataset = Dataset("data_rfdetr")
 
 ds = sv.DetectionDataset.from_coco(
     images_directory_path=f"{dataset.location}/valid",

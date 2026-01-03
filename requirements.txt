@@ -4,6 +4,8 @@ torchvision
 
 ultralytics>=8.1.0
 
+numpy==1.26.0
+
 # RF-DETR (dùng đúng API optimize_for_inference + predict)
 rfdetr==1.2.1
 

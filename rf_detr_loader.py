@@ -55,7 +55,7 @@ def load_rfdetr(weights="checkpoint_best_total.pth"):
     """
     print(f"🔄 Loading RF-DETR from {weights} ...")
     model = RFDETRMedium(pretrain_weights=weights)
-    model.optimize_for_inference()
+    #model.optimize_for_inference()
     print("✅ RF-DETR ready for inference!")
     return model
 
