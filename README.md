@@ -104,7 +104,7 @@ pip install -r requirements.txt
 	```bash
 	python train/RF-DETR/train.py
 	```
-- YOLO v11/v12:
+- YOLO v11/v12 (Nếu muốn train YOLO v12 chỉ cần đổi tên model trong source code lại):
 	```bash
 	python train/YOLO_v11+v12/train.py
 	```
