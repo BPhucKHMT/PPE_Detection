@@ -17,23 +17,30 @@ Hệ thống phát hiện thiết bị bảo hộ cá nhân (PPE) cho môi trư�
 
 ![Demo PPE tracking and alerts](public/demo1.png)
 
+---
+
+### Kết quả tổng hợp
+
 ![Result summary](public/result.png)
 
 ## Kiến trúc tổng quan
 
 ```mermaid
-flowchart LR
-    A["Video Upload"] --> B["FastAPI /detect/upload"]
-    B --> C["Job Store"]
-    C --> D["WebSocket /detect/stream/{job_id}"]
-    D --> E["Frame Reader + Resize + Frame Skip"]
-    E --> F["RF-DETR Runtime"]
-    F --> G["Active Class Filter + NMS"]
-    G --> H["Deep SORT Tracking"]
-    H --> I["PPE Association"]
-    I --> J["Alert Engine"]
-    J --> K["Overlay + JPEG Encode"]
-    K --> L["React Frontend Stream"]
+flowchart TD
+    A["Upload Video"] --> B["Create Job"]
+    B --> C["WebSocket Stream"]
+
+    subgraph Inference
+      D["Preprocess Frame"] --> E["RF-DETR"] --> F["Filter + NMS"]
+    end
+
+    subgraph Tracking
+      G["Deep SORT"] --> H["PPE Association"] --> I["Alert Engine"]
+    end
+
+    C --> D
+    F --> G
+    I --> J["Overlay + Encode"] --> K["Frontend View"]
 ```
 
 ### Luồng xử lý chính
