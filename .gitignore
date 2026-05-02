@@ -1,5 +1,92 @@
-checkpoint_best_total.pth
+# Python caches
 __pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Environment and local settings
+.env
+.env.*
+!.env.example
+frontend/.env
+backend/.env
+.codex
+.vscode/
+
+# Node / frontend build artifacts
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.cache/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Datasets and archives
 data_rfdetr/
 data_yolo/
 data_yolo.zip
+backend/data/
+*.zip
+*.tar
+*.tar.gz
+*.7z
+*.rar
+
+# Model checkpoints and exported runtimes
+checkpoint_best_total.pth
+*.pt
+*.pth
+*.onnx
+*.engine
+*.trt
+*.plan
+*.ckpt
+*.safetensors
+models/**/*.pt
+models/**/*.pth
+models/**/*.onnx
+models/**/*.engine
+backend/models/**/*.pt
+backend/models/**/*.pth
+backend/models/**/*.onnx
+backend/models/**/*.engine
+
+# Generated training/evaluation outputs
+runs/
+backend/runs/
+wandb/
+mlruns/
+results/**/predictions.json
+results/**/events.out.tfevents*
+
+# Temporary video/image outputs
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
+*.jpg
+*.jpeg
+*.bmp
+*.tiff
+!public/*.png
+!public/*.jpg
+!public/*.jpeg
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
