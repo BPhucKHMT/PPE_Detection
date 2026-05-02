@@ -17,6 +17,8 @@ Hệ thống phát hiện thiết bị bảo hộ cá nhân (PPE) cho môi trư�
 
 ![Demo PPE tracking and alerts](public/demo1.png)
 
+![Result summary](public/result.png)
+
 ## Kiến trúc tổng quan
 
 ```mermaid
