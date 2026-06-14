@@ -1,29 +1,29 @@
 # CS406 Final Report - PPE Detection System
 
-Hệ thống phát hiện thiết bị bảo hộ cá nhân (PPE) cho môi trường công nghiệp/kho vận. Dự án kết hợp mô hình RF-DETR, backend FastAPI realtime qua WebSocket, frontend Vite/React và các notebook huấn luyện/đánh giá mô hình.
+A personal protective equipment (PPE) detection system for industrial and warehouse environments. The project combines an RF-DETR model, a FastAPI backend with real-time WebSocket streaming, a Vite/React frontend, and training/evaluation notebooks.
 
-## Mục tiêu
+## Objectives
 
-- Phát hiện người và PPE: `person`, `helmet`, `safety-vest`, `gloves`, `shoes`.
-- Theo dõi người qua video bằng Deep SORT.
-- Gán PPE vào từng track người.
-- Cảnh báo khi thiếu PPE kéo dài qua nhiều frame.
-- Hỗ trợ tối ưu realtime bằng ONNX/TensorRT và cấu hình stream.
-- Lưu trữ kết quả huấn luyện, đánh giá và tài liệu phân tích phục vụ báo cáo CS406.
+- Detect people and PPE classes: `person`, `helmet`, `safety-vest`, `gloves`, and `shoes`.
+- Track people across video frames with Deep SORT.
+- Associate detected PPE items with each tracked person.
+- Raise alerts when required PPE is missing for multiple consecutive frames.
+- Support real-time optimization with ONNX/TensorRT and stream configuration.
+- Store training results, evaluation outputs, and technical analysis for the CS406 report.
 
 ## Demo
 
-![Demo realtime PPE detection](public/demo.png)
+![Real-time PPE detection demo](public/demo.png)
 
-![Demo PPE tracking and alerts](public/demo1.png)
+![PPE tracking and alert demo](public/demo1.png)
 
 ---
 
-### Kết quả tổng hợp
+### Result Summary
 
 ![Result summary](public/result.png)
 
-## Kiến trúc tổng quan
+## System Architecture
 
 ```mermaid
 flowchart TD
@@ -43,100 +43,100 @@ flowchart TD
     I --> J["Overlay + Encode"] --> K["Frontend View"]
 ```
 
-### Luồng xử lý chính
+### Main Processing Flow
 
-1. Frontend upload video tới backend.
-2. Backend lưu video tạm và tạo `job_id`.
-3. Frontend mở WebSocket theo `job_id`.
-4. Backend đọc từng frame, resize và skip frame theo `STREAM_CONFIG`.
-5. RF-DETR runtime phát hiện object.
-6. Hệ thống lọc theo `ACTIVE_CLASSES` và NMS để giảm box trùng.
-7. Deep SORT tạo/cập nhật track người.
-8. `ppe_association.py` gán PPE vào từng track theo vùng cơ thể.
-9. `alert_engine.py` đánh giá thiếu PPE theo thời gian/streak.
-10. Frame đã vẽ bbox + track + alert được encode JPEG và gửi về frontend.
+1. The frontend uploads a video to the backend.
+2. The backend stores the temporary video and creates a `job_id`.
+3. The frontend opens a WebSocket connection using the `job_id`.
+4. The backend reads frames, resizes them, and applies frame skipping based on `STREAM_CONFIG`.
+5. The RF-DETR runtime detects objects in each selected frame.
+6. The system filters detections by `ACTIVE_CLASSES` and applies NMS to reduce duplicate boxes.
+7. Deep SORT creates or updates person tracks.
+8. `ppe_association.py` associates PPE detections with each person track using body regions.
+9. `alert_engine.py` evaluates missing PPE by duration and streak stability.
+10. Annotated frames with bounding boxes, track IDs, and alerts are JPEG-encoded and streamed to the frontend.
 
-## Cấu trúc thư mục
+## Project Structure
 
 ```text
 CS406_final_report/
-├── README.md                         # Tài liệu tổng quan dự án
-├── requirements.txt                   # Dependency Python mức root
-├── rf_detr_loader.py                  # Loader/inference RF-DETR thử nghiệm đơn lẻ
-├── video_optimization.py              # Cấu hình resize, frame skip, FPS target
+├── README.md                         # Project overview documentation
+├── requirements.txt                   # Root-level Python dependencies
+├── rf_detr_loader.py                  # Standalone RF-DETR loader/inference experiment
+├── video_optimization.py              # Resize, frame skip, and target FPS configuration
 │
-├── backend/                           # Backend realtime detection
+├── backend/                           # Real-time detection backend
 │   ├── app/
-│   │   ├── main.py                    # FastAPI app entrypoint
+│   │   ├── main.py                    # FastAPI application entrypoint
 │   │   ├── api/
-│   │   │   └── ws_routes.py           # Upload endpoint + WebSocket stream loop
+│   │   │   └── ws_routes.py           # Upload endpoint and WebSocket streaming loop
 │   │   ├── core/
-│   │   │   └── config.py              # Class active, threshold, tracking, alert config
+│   │   │   └── config.py              # Active classes, thresholds, tracking, and alert config
 │   │   └── services/
-│   │       ├── alert_engine.py        # WARN/VIOLATION/CRITICAL logic
-│   │       ├── frame_processing.py    # Filter, timestamp, overlay drawing
-│   │       ├── job_store.py           # Lưu job video tạm theo job_id
-│   │       ├── ppe_association.py     # Gán PPE cho từng person track
-│   │       ├── runtime_selector.py    # Chọn TensorRT/ONNX/Native runtime
+│   │       ├── alert_engine.py        # WARN/VIOLATION/CRITICAL alert logic
+│   │       ├── frame_processing.py    # Filtering, timestamps, and overlay drawing
+│   │       ├── job_store.py           # Temporary video job storage by job_id
+│   │       ├── ppe_association.py     # PPE association for each person track
+│   │       ├── runtime_selector.py    # TensorRT/ONNX/Native runtime selection
 │   │       └── tracking_service.py    # Deep SORT wrapper
-│   ├── model_runtime.py               # Detection dataclass + payload converter
+│   ├── model_runtime.py               # Detection dataclass and payload converter
 │   ├── rfdetr_runtime.py              # Native/ONNX/TensorRT RF-DETR runtimes
-│   ├── export_rfdetr_onnx.py          # Export model sang ONNX
+│   ├── export_rfdetr_onnx.py          # Export model to ONNX
 │   ├── build_rfdetr_tensorrt.py       # Build TensorRT engine
-│   ├── benchmark_rfdetr_runtime.py    # Benchmark runtime model
-│   ├── estimate_person_distance.py    # Ước lượng khoảng cách theo người
-│   ├── estimate_distance_homography.py # Ước lượng khoảng cách bằng homography
-│   ├── models/                        # Model backend/runtime artifacts
-│   ├── data/                          # Dataset/script train backend legacy
-│   ├── runs/                          # Output các lần chạy backend
-│   └── tests/                         # Unit/integration tests backend
+│   ├── benchmark_rfdetr_runtime.py    # Benchmark runtime models
+│   ├── estimate_person_distance.py    # Estimate distance by person detection
+│   ├── estimate_distance_homography.py # Estimate distance with homography
+│   ├── models/                        # Backend model/runtime artifacts
+│   ├── data/                          # Legacy backend dataset/training scripts
+│   ├── runs/                          # Backend run outputs
+│   └── tests/                         # Backend unit/integration tests
 │
 ├── frontend/                          # Vite/React frontend
 │   ├── src/app/
 │   │   ├── App.tsx                    # App shell
-│   │   ├── config.ts                  # API/WS base URL config
+│   │   ├── config.ts                  # API/WS base URL configuration
 │   │   ├── routes.tsx                 # Route definitions
-│   │   ├── pages/UploadPage.tsx       # Upload + realtime stream UI
+│   │   ├── pages/UploadPage.tsx       # Upload and real-time stream UI
 │   │   ├── services/
-│   │   │   ├── uploadApi.ts           # POST video upload
+│   │   │   ├── uploadApi.ts           # POST video upload client
 │   │   │   └── streamSocket.ts        # WebSocket client
 │   │   ├── components/                # UI components
 │   │   ├── context/                   # React context
 │   │   └── layout/                    # Layout components
-│   ├── package.json                   # Frontend scripts/dependencies
-│   ├── vite.config.ts                 # Vite config
+│   ├── package.json                   # Frontend scripts and dependencies
+│   ├── vite.config.ts                 # Vite configuration
 │   └── .env                           # Frontend API/WS environment variables
 │
-├── models/                            # Checkpoint/model artifacts cấp project
-├── notebooks/                         # Notebook train/evaluate/augmentation
+├── models/                            # Project-level checkpoint/model artifacts
+├── notebooks/                         # Training/evaluation/augmentation notebooks
 │   └── cs406-rf-detr-augmentation.ipynb
 ├── results/
-│   └── evaluation/                    # Metric CSV/report sau evaluate
+│   └── evaluation/                    # Evaluation metrics and reports
 │       ├── per_class_metrics.csv
 │       ├── overall_metrics.csv
 │       ├── speed_metrics.csv
 │       └── evaluation_report.txt
-├── docs/                              # Tài liệu kỹ thuật chi tiết
+├── docs/                              # Detailed technical documentation
 │   ├── frontend.md
 │   ├── frontend_detailed.md
 │   ├── optimize_model.md
 │   ├── system_issues.md
 │   └── tracking.md
-├── deploy/                            # Tài nguyên triển khai nếu có
+├── deploy/                            # Deployment resources, if available
 ├── public/                            # Static assets
-└── scripts/                           # Script tiện ích
+└── scripts/                           # Utility scripts
 ```
 
-## Thành phần backend
+## Backend Components
 
 ### `backend/app/api/ws_routes.py`
 
-Điểm điều phối realtime chính:
+Main real-time orchestration layer:
 
-- `POST /detect/upload`: nhận video và tạo `job_id`.
-- `WS /detect/stream/{job_id}`: đọc video, chạy detect, tracking, alert và stream frame.
+- `POST /detect/upload`: receives a video and creates a `job_id`.
+- `WS /detect/stream/{job_id}`: reads the video, runs detection, tracking, and alerting, then streams annotated frames.
 
-Pipeline trong route này:
+Pipeline inside this route:
 
 ```text
 VideoCapture
@@ -153,102 +153,102 @@ VideoCapture
 
 ### `backend/rfdetr_runtime.py`
 
-Quản lý các runtime RF-DETR:
+Manages RF-DETR runtimes:
 
-- `RFDETRNativeRuntime`: chạy checkpoint native bằng thư viện RF-DETR.
-- `RFDETRONNXRuntime`: chạy ONNX Runtime.
-- `RFDETRTensorRTRuntime`: chạy TensorRT engine.
+- `RFDETRNativeRuntime`: runs the native RF-DETR checkpoint through the RF-DETR library.
+- `RFDETRONNXRuntime`: runs inference with ONNX Runtime.
+- `RFDETRTensorRTRuntime`: runs inference with a TensorRT engine.
 
-File này cũng chứa:
+This file also includes:
 
-- preprocess frame về input model.
-- postprocess output thành `Detection`.
-- class-wise NMS bằng `NMS_IOU_THRESHOLD`.
+- Frame preprocessing for model input.
+- Output postprocessing into `Detection` objects.
+- Class-wise NMS using `NMS_IOU_THRESHOLD`.
 
 ### `backend/app/services/runtime_selector.py`
 
-Chọn runtime theo thứ tự ưu tiên và fallback:
+Selects the inference runtime by priority and fallback order:
 
-1. TensorRT nếu engine/GPU khả dụng.
-2. ONNX nếu runtime khả dụng.
-3. Native RF-DETR nếu cần fallback.
+1. TensorRT when the engine and GPU are available.
+2. ONNX when the runtime is available.
+3. Native RF-DETR as the final fallback.
 
 ### `backend/app/services/tracking_service.py`
 
-Wrapper Deep SORT:
+Deep SORT wrapper:
 
-- chỉ đưa `person` vào tracker.
-- output track gồm `track_id`, `bbox_xyxy`, `hits`, `age`, `missed`.
+- Sends only `person` detections to the tracker.
+- Outputs tracks with `track_id`, `bbox_xyxy`, `hits`, `age`, and `missed`.
 
 ### `backend/app/services/ppe_association.py`
 
-Gán PPE vào từng người:
+Associates PPE with each person:
 
-- Không còn chỉ dùng bbox intersection đơn giản.
-- Dùng tâm bbox PPE và vùng cơ thể:
-  - helmet: vùng đầu.
-  - safety vest: vùng thân.
-  - shoes: vùng chân dưới.
-- Mỗi PPE detection được gán cho track gần nhất.
+- Does not rely only on simple bounding-box intersection.
+- Uses PPE bounding-box centers and body regions:
+  - helmet: head region.
+  - safety vest: torso region.
+  - shoes: lower-leg/foot region.
+- Each PPE detection is assigned to the nearest valid person track.
 
 ### `backend/app/services/alert_engine.py`
 
-Đánh giá cảnh báo:
+Evaluates alert states:
 
-- `NORMAL`: không thiếu PPE hoặc track chưa đủ ổn định.
-- `SUSPECTED_VIOLATION`: thiếu PPE nhưng chưa vượt ngưỡng thời gian.
-- `CONFIRMED_VIOLATION`: thiếu PPE liên tục quá `ALERT_VIOLATION_THRESHOLD_MS`.
-- `critical`: nếu kéo dài quá `ALERT_ESCALATION_MS`.
+- `NORMAL`: no missing PPE, or the track is not stable enough yet.
+- `SUSPECTED_VIOLATION`: PPE is missing but has not exceeded the duration threshold.
+- `CONFIRMED_VIOLATION`: PPE is missing continuously beyond `ALERT_VIOLATION_THRESHOLD_MS`.
+- `critical`: the violation lasts beyond `ALERT_ESCALATION_MS`.
 
-Engine có missing streak để giảm nhiễu do detection flicker.
+The engine uses missing streaks to reduce noise from detection flicker.
 
-## Cấu hình quan trọng
+## Important Configuration
 
-Trong `backend/app/core/config.py`:
+In `backend/app/core/config.py`:
 
-| Biến | Ý nghĩa |
+| Variable | Meaning |
 | --- | --- |
-| `DEVICE`, `DEVICE_LABEL` | Thiết bị chạy model, ưu tiên auto CUDA nếu khả dụng |
-| `ACTIVE_CLASSES` | Class giữ lại sau detect |
-| `CONFIDENCE_THRESHOLD` | Ngưỡng confidence detect |
-| `NMS_IOU_THRESHOLD` | Ngưỡng IoU cho class-wise NMS |
-| `STREAM_CONFIG` | Resize, frame skip, target FPS |
-| `TRACKING_MAX_AGE` | Số frame track được giữ khi mất detection |
-| `TRACKING_N_INIT` | Số frame để confirm track |
-| `TRACKING_MAX_IOU_DISTANCE` | Ngưỡng matching IoU tracker |
-| `ALERT_VIOLATION_THRESHOLD_MS` | Thời gian thiếu PPE để lên violation |
-| `ALERT_COOLDOWN_MS` | Khoảng cách giữa hai alert cùng track |
-| `ALERT_ESCALATION_MS` | Thời gian để nâng lên critical |
-| `ALERT_MIN_TRACK_AGE` | Track age tối thiểu để xét alert |
-| `ALERT_MIN_TRACK_HITS` | Số hit tối thiểu để xét alert |
+| `DEVICE`, `DEVICE_LABEL` | Model execution device; prefers automatic CUDA detection when available |
+| `ACTIVE_CLASSES` | Classes kept after detection |
+| `CONFIDENCE_THRESHOLD` | Detection confidence threshold |
+| `NMS_IOU_THRESHOLD` | IoU threshold for class-wise NMS |
+| `STREAM_CONFIG` | Resize, frame skip, and target FPS settings |
+| `TRACKING_MAX_AGE` | Number of frames a track is kept after missing detections |
+| `TRACKING_N_INIT` | Number of frames required to confirm a track |
+| `TRACKING_MAX_IOU_DISTANCE` | IoU matching threshold for the tracker |
+| `ALERT_VIOLATION_THRESHOLD_MS` | Missing-PPE duration required to mark a violation |
+| `ALERT_COOLDOWN_MS` | Minimum interval between alerts for the same track |
+| `ALERT_ESCALATION_MS` | Duration required to escalate a violation to critical |
+| `ALERT_MIN_TRACK_AGE` | Minimum track age required before alert evaluation |
+| `ALERT_MIN_TRACK_HITS` | Minimum number of hits required before alert evaluation |
 
-## Frontend workflow
+## Frontend Workflow
 
-Frontend nằm trong `frontend/` và dùng Vite/React.
+The frontend is located in `frontend/` and uses Vite/React.
 
-Luồng chính:
+Main flow:
 
-1. Người dùng chọn video trong `UploadPage.tsx`.
-2. `uploadApi.ts` upload video tới backend.
-3. Backend trả `job_id`.
-4. `streamSocket.ts` mở WebSocket.
-5. Frontend nhận payload frame:
-   - ảnh base64 JPEG.
-   - số frame đã xử lý.
-   - FPS/latency.
-   - detections/tracks/alerts.
-6. UI hiển thị video stream, track state và live alerts.
+1. The user selects a video in `UploadPage.tsx`.
+2. `uploadApi.ts` uploads the video to the backend.
+3. The backend returns a `job_id`.
+4. `streamSocket.ts` opens a WebSocket connection.
+5. The frontend receives frame payloads containing:
+   - Base64 JPEG image.
+   - Number of processed frames.
+   - FPS and latency.
+   - Detections, tracks, and alerts.
+6. The UI displays the video stream, track state, and live alerts.
 
-Biến môi trường frontend:
+Frontend environment variables:
 
 ```env
 VITE_API_BASE_URL=http://localhost:8000
 VITE_WS_BASE_URL=ws://localhost:8000
 ```
 
-## Workflow phát triển
+## Development Workflow
 
-### 1. Cài đặt backend
+### 1. Install Backend Dependencies
 
 ```powershell
 conda create -n cs406 python=3.10
@@ -256,101 +256,101 @@ conda activate cs406
 pip install -r requirements.txt
 ```
 
-Nếu backend có requirements riêng, cài thêm trong `backend/` theo file tương ứng nếu tồn tại.
+If the backend has its own dependency file, install it from `backend/` as needed.
 
-### 2. Chạy backend
+### 2. Run the Backend
 
 ```powershell
 uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### 3. Cài đặt frontend
+### 3. Install Frontend Dependencies
 
 ```powershell
 npm install --prefix frontend
 ```
 
-### 4. Chạy frontend
+### 4. Run the Frontend
 
 ```powershell
 npm run dev --prefix frontend
 ```
 
-### 5. Test realtime detection
+### 5. Test Real-Time Detection
 
-1. Mở frontend theo URL Vite.
-2. Upload video.
-3. Bấm Start.
-4. Quan sát:
+1. Open the frontend through the Vite URL.
+2. Upload a video.
+3. Click Start.
+4. Observe:
    - Stream FPS.
    - Track ID.
-   - trạng thái `OK`, `WARN`, `VIOLATION`.
-   - Live Alerts.
+   - `OK`, `WARN`, and `VIOLATION` states.
+   - Live alerts.
 
-## Workflow huấn luyện và đánh giá model
+## Model Training and Evaluation Workflow
 
 ### Notebook
 
-Notebook chính:
+Main notebook:
 
 ```text
 notebooks/cs406-rf-detr-augmentation.ipynb
 ```
 
-Dùng cho:
+Used for:
 
-- augmentation dữ liệu.
-- training/fine-tuning RF-DETR.
-- evaluate model.
-- xuất metric phục vụ báo cáo.
+- Data augmentation.
+- RF-DETR training/fine-tuning.
+- Model evaluation.
+- Metric export for the report.
 
-### Kết quả đánh giá
+### Evaluation Results
 
-Metric nằm tại:
+Metrics are stored in:
 
 ```text
 results/evaluation/
 ```
 
-Các file quan trọng:
+Important files:
 
-- `per_class_metrics.csv`: precision/recall/F1/mAP theo class.
-- `overall_metrics.csv`: metric tổng quan.
-- `speed_metrics.csv`: tốc độ inference/evaluate.
-- `evaluation_report.txt`: báo cáo text tổng hợp.
+- `per_class_metrics.csv`: precision, recall, F1, and mAP by class.
+- `overall_metrics.csv`: overall metrics.
+- `speed_metrics.csv`: inference/evaluation speed metrics.
+- `evaluation_report.txt`: consolidated text report.
 
-Lưu ý hiện tại: `safety-vest` có recall thấp hơn nhiều class khác, nên runtime cần smoothing/hysteresis để tránh false violation khi vest detect chập chờn.
+Current note: `safety-vest` has significantly lower recall than the other classes, so the runtime should use smoothing/hysteresis to avoid false violations when vest detections flicker.
 
-## Workflow tối ưu hiệu năng
+## Performance Optimization Workflow
 
-Các điểm tối ưu đang dùng hoặc có thể tinh chỉnh:
+Current and tunable optimization points:
 
 1. **Runtime selection**
-   - TensorRT cho GPU nếu khả dụng.
-   - ONNX/Native làm fallback.
+   - Use TensorRT on GPU when available.
+   - Use ONNX/Native as fallbacks.
 
-2. **Stream config**
-   - giảm `max_width` để giảm latency.
-   - tăng `frame_skip` khi cảnh đông.
-   - giảm JPEG quality khi nghẽn encode/network.
+2. **Stream configuration**
+   - Reduce `max_width` to lower latency.
+   - Increase `frame_skip` in crowded scenes.
+   - Reduce JPEG quality when encoding or network transfer becomes a bottleneck.
 
-3. **Detection postprocess**
-   - `CONFIDENCE_THRESHOLD` kiểm soát độ nhạy.
-   - `NMS_IOU_THRESHOLD` giảm bbox trùng.
-   - `ACTIVE_CLASSES` lọc class cần thiết sau predict.
+3. **Detection postprocessing**
+   - `CONFIDENCE_THRESHOLD` controls detection sensitivity.
+   - `NMS_IOU_THRESHOLD` reduces duplicate boxes.
+   - `ACTIVE_CLASSES` filters required classes after prediction.
 
-4. **Tracking/association**
-   - Deep SORT chỉ track person.
-   - PPE association dùng vùng cơ thể thay vì overlap thô.
+4. **Tracking and association**
+   - Deep SORT tracks only people.
+   - PPE association uses body regions instead of raw overlap.
 
 5. **Alert stability**
-   - Track phải đủ `age/hits`.
-   - Missing PPE phải kéo dài đủ ngưỡng.
-   - Cần smoothing cho class có recall thấp như `safety-vest`.
+   - Tracks must have enough `age` and `hits`.
+   - Missing PPE must persist long enough before violation.
+   - Classes with low recall, such as `safety-vest`, should be smoothed by track before lowering alert thresholds.
 
-## API payload realtime
+## Real-Time API Payload
 
-Mỗi frame WebSocket gửi payload dạng:
+Each WebSocket frame sends a payload in this format:
 
 ```json
 {
@@ -369,7 +369,7 @@ Mỗi frame WebSocket gửi payload dạng:
 }
 ```
 
-Payload `done`:
+`done` payload:
 
 ```json
 {
@@ -378,17 +378,17 @@ Payload `done`:
 }
 ```
 
-## Tài liệu liên quan
+## Related Documentation
 
-- `docs/tracking.md`: ghi chú tracking và association.
-- `docs/optimize_model.md`: hướng tối ưu model/runtime.
-- `docs/system_issues.md`: lỗi hệ thống đã gặp và hướng xử lý.
-- `docs/frontend_detailed.md`: tài liệu chi tiết frontend.
+- `docs/tracking.md`: tracking and association notes.
+- `docs/optimize_model.md`: model/runtime optimization guidance.
+- `docs/system_issues.md`: known system issues and solutions.
+- `docs/frontend_detailed.md`: detailed frontend documentation.
 
-## Ghi chú vận hành
+## Operations Notes
 
-- Sau khi sửa config/backend, cần restart backend để load lại module.
-- Nếu WebSocket báo `invalid job_id`, upload lại video để tạo job mới.
-- Nếu GPU không ổn định, để `DEVICE_LABEL` auto-detect thay vì hardcode CUDA.
-- Nếu bbox chồng nhiều, giảm `NMS_IOU_THRESHOLD`.
-- Nếu PPE detect chập chờn, ưu tiên smoothing theo track trước khi giảm threshold alert.
+- Restart the backend after changing backend/config files so modules are reloaded.
+- If the WebSocket reports `invalid job_id`, upload the video again to create a new job.
+- If the GPU is unstable, keep `DEVICE_LABEL` on auto-detection instead of hardcoding CUDA.
+- If bounding boxes overlap heavily, reduce `NMS_IOU_THRESHOLD`.
+- If PPE detections flicker, prioritize per-track smoothing before lowering alert thresholds.
