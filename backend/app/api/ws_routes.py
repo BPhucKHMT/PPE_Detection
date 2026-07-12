@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import contextlib
 import logging
 import os
 import tempfile
@@ -99,9 +100,11 @@ async def detect_stream(websocket: WebSocket, job_id: str) -> None:
     cap = cv2.VideoCapture(job.video_path)
     frame_index = 0
     processed_frames = 0
+    dropped_frames = 0
     source_fps = normalize_video_fps(float(cap.get(cv2.CAP_PROP_FPS) or 0.0))
     output_fps = source_fps / max(1, int(STREAM_CONFIG.frame_skip))
     stream_started_at = time.perf_counter()
+    outbound_queue: asyncio.Queue[dict] = asyncio.Queue(maxsize=1)
 
     tracking_service = TrackingService(
         max_age=TRACKING_MAX_AGE,
@@ -116,16 +119,33 @@ async def detect_stream(websocket: WebSocket, job_id: str) -> None:
         min_track_hits=ALERT_MIN_TRACK_HITS,
     )
 
+    async def _sender() -> None:
+        while True:
+            payload = await outbound_queue.get()
+            if payload.get("type") == "_stop":
+                outbound_queue.task_done()
+                break
+            await websocket.send_json(payload)
+            outbound_queue.task_done()
+            await asyncio.sleep(0)
+
+    sender_task = asyncio.create_task(_sender())
+
     try:
         while cap.isOpened():
             if job.cancel:
                 await websocket.send_json({"type": "done", "reason": "cancelled"})
                 break
 
-            ret, frame = cap.read()
+            ret, frame = await asyncio.to_thread(cap.read)
             if not ret:
-                logger.info("[ws] completed job_id=%s processed_frames=%s", job_id, processed_frames)
-                await websocket.send_json({"type": "done", "reason": "completed"})
+                logger.info("[ws] completed job_id=%s processed_frames=%s dropped_frames=%s", job_id, processed_frames, dropped_frames)
+                try:
+                    outbound_queue.put_nowait({"type": "done", "reason": "completed"})
+                except asyncio.QueueFull:
+                    _ = outbound_queue.get_nowait()
+                    outbound_queue.task_done()
+                    outbound_queue.put_nowait({"type": "done", "reason": "completed"})
                 break
 
             frame_index += 1
@@ -133,7 +153,11 @@ async def detect_stream(websocket: WebSocket, job_id: str) -> None:
                 continue
 
             frame = resize_frame(frame, max_width=STREAM_CONFIG.max_width)
-            detections = get_detection_runtime().predict(frame, conf=CONFIDENCE_THRESHOLD)
+            infer_started = time.perf_counter()
+            detections = await asyncio.to_thread(
+                lambda: get_detection_runtime().predict(frame, conf=CONFIDENCE_THRESHOLD)
+            )
+            infer_ms = (time.perf_counter() - infer_started) * 1000
             detections, boxes_before, boxes_after = filter_detections_by_active_classes(detections)
 
             tracks = tracking_service.update_tracks(detections=detections, frame=frame)
@@ -156,11 +180,14 @@ async def detect_stream(websocket: WebSocket, job_id: str) -> None:
                 len(alerts),
             )
 
-            ok, buffer = cv2.imencode(
+            encode_started = time.perf_counter()
+            ok, buffer = await asyncio.to_thread(
+                cv2.imencode,
                 ".jpg",
                 annotated,
                 [int(cv2.IMWRITE_JPEG_QUALITY), 68],
             )
+            encode_ms = (time.perf_counter() - encode_started) * 1000
             if not ok:
                 continue
 
@@ -169,28 +196,47 @@ async def detect_stream(websocket: WebSocket, job_id: str) -> None:
             if delay > 0:
                 await asyncio.sleep(delay)
 
-            frame_b64 = base64.b64encode(buffer.tobytes()).decode("utf-8")
-            await websocket.send_json(
-                build_stream_frame_payload(
-                    frame_b64=frame_b64,
-                    processed_frames=processed_frames,
-                    frame_index=frame_index,
-                    timestamp_ms=timestamp_ms,
-                    source_fps=source_fps,
-                    output_fps=output_fps,
-                    boxes_before_filter=boxes_before,
-                    boxes_after_filter=boxes_after,
-                    detections=detection_payload,
-                    tracks=tracks,
-                    alerts=alerts,
-                )
+            payload_started = time.perf_counter()
+            frame_b64 = base64.b64encode(buffer).decode("utf-8")
+            payload = build_stream_frame_payload(
+                frame_b64=frame_b64,
+                processed_frames=processed_frames,
+                frame_index=frame_index,
+                timestamp_ms=timestamp_ms,
+                source_fps=source_fps,
+                output_fps=output_fps,
+                boxes_before_filter=boxes_before,
+                boxes_after_filter=boxes_after,
+                detections=detection_payload,
+                tracks=tracks,
+                alerts=alerts,
             )
-            await asyncio.sleep(0)
+
+            try:
+                outbound_queue.put_nowait(payload)
+            except asyncio.QueueFull:
+                _ = outbound_queue.get_nowait()
+                outbound_queue.task_done()
+                dropped_frames += 1
+                outbound_queue.put_nowait(payload)
+
+            payload_ms = (time.perf_counter() - payload_started) * 1000
+            if processed_frames % 5 == 0:
+                print(
+                    f"[ws-perf] job_id={job_id} processed={processed_frames} dropped={dropped_frames} "
+                    f"infer_ms={infer_ms:.1f} encode_ms={encode_ms:.1f} payload_ms={payload_ms:.1f}",
+                    flush=True,
+                )
+
 
     except WebSocketDisconnect:
         logger.warning("[ws] disconnected job_id=%s", job_id)
         job_store.cancel(job_id)
     finally:
+        with contextlib.suppress(asyncio.QueueFull):
+            outbound_queue.put_nowait({"type": "_stop"})
+        with contextlib.suppress(Exception):
+            await sender_task
         logger.info("[ws] cleanup job_id=%s", job_id)
         cap.release()
         existing = job_store.pop(job_id)

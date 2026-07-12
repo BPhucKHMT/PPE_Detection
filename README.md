@@ -13,15 +13,15 @@ A personal protective equipment (PPE) detection system for industrial and wareho
 
 ## Demo
 
-![Real-time PPE detection demo](public/demo.png)
+![Real-time PPE detection demo](public/demo.jpg)
 
-![PPE tracking and alert demo](public/demo1.png)
+![PPE tracking and alert demo](public/demo1.jpg)
 
 ---
 
 ### Result Summary
 
-![Result summary](public/result.png)
+![Result summary](public/result.jpg)
 
 ## System Architecture
 
